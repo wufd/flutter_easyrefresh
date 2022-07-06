@@ -1,8 +1,8 @@
+import 'package:example/generated/i18n.dart';
 import 'package:example/page/more/more.dart';
 import 'package:example/page/sample/sample.dart';
 import 'package:example/page/style/style.dart';
 import 'package:flutter/material.dart';
-import 'package:example/generated/i18n.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_easyrefresh/easy_refresh.dart';
 
@@ -23,7 +23,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _pageController = PageController();
-    SchedulerBinding.instance!.addPostFrameCallback((Duration timestamp) {
+    SchedulerBinding.instance.addPostFrameCallback((Duration timestamp) {
       // 设置EasyRefresh的默认样式
       EasyRefresh.defaultHeader = ClassicalHeader(
         enableInfiniteRefresh: false,
@@ -79,11 +79,11 @@ class _HomePageState extends State<HomePage> {
         onTap: _onBottomNavigationBarTap,
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard), title: Text(S.of(context).sample)),
+              icon: Icon(Icons.dashboard), label: S.of(context).sample),
           BottomNavigationBarItem(
-              icon: Icon(Icons.style), title: Text(S.of(context).style)),
+              icon: Icon(Icons.style), label: S.of(context).style),
           BottomNavigationBarItem(
-              icon: Icon(Icons.more_vert), title: Text(S.of(context).more)),
+              icon: Icon(Icons.more_vert), label: S.of(context).more),
         ],
       ),
     );
