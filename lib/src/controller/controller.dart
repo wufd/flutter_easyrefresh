@@ -198,6 +198,10 @@ class EasyRefreshController {
     _state?._footerNotifier._finishTask(result);
   }
 
+  void noMore() {
+    _state?._footerNotifier._finishTask(IndicatorResult.noMore);
+  }
+
   /// Unbind.
   void dispose() {
     _state = null;
