@@ -199,7 +199,7 @@ class EasyRefreshController {
   }
 
   void noMore() {
-    _state?._footerNotifier._finishTask(IndicatorResult.noMore);
+    _state?._footerNotifier._noMore();
   }
 
   /// Unbind.

@@ -672,6 +672,12 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     }
   }
 
+  void _noMore() {
+    _result = IndicatorResult.noMore;
+    _setMode(IndicatorMode.processed);
+    _processing = false;
+  }
+
   /// Start [clamping] animation
   void _startClampingAnimation(Simulation simulation) {
     if (_offset <= 0) {
