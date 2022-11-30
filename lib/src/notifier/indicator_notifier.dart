@@ -14,7 +14,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   Indicator _indicator;
 
   /// Used to provide [clamping] animation.
-  final _EasyRefreshState vsync;
+  final TickerProviderStateMixin vsync;
 
   /// User triggered notifier.
   /// Record user triggers and releases.
@@ -387,14 +387,22 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// [duration] See [ScrollPosition.animateTo].
   /// [curve] See [ScrollPosition.animateTo].
   /// [scrollController] When position is not [ScrollPosition], you can use [ScrollController].
+  /// [force] Enforce execution even if the task is in progress. But you have to handle the completion event.
   Future callTask({
     required double overOffset,
     Duration? duration,
     Curve curve = Curves.linear,
     ScrollController? scrollController,
+    bool force = false,
   }) {
-    if (modeLocked || noMoreLocked || secondaryLocked || !_canProcess) {
-      return Future.value();
+    if (!force) {
+      if (modeLocked || noMoreLocked || secondaryLocked || !_canProcess) {
+        return Future.value();
+      }
+    } else {
+      _offset = 0;
+      _mode = IndicatorMode.inactive;
+      _processing = false;
     }
     return animateToOffset(
       offset: actualTriggerOffset + overOffset,
@@ -665,8 +673,8 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// Finish task and return the result.
   /// [result] Result of task completion.
   void _finishTask([IndicatorResult result = IndicatorResult.success]) {
-    if (!_waitTaskResult) {
-      _result = result;
+    _result = result;
+    if (!_waitTaskResult && mode == IndicatorMode.processing) {
       _setMode(IndicatorMode.processed);
       _processing = false;
     }
@@ -709,6 +717,18 @@ abstract class IndicatorNotifier extends ChangeNotifier {
         }
       }
     }
+    if (clamping && !userOffsetNotifier.value) {
+      // Sucks. When clamping, the position will not change after the task is completed.
+      // Temporary solution like this, there is a better way to replace.
+      double pixels = _position.pixels;
+      const tiny = 0.001;
+      if (pixels > tiny) {
+        pixels -= tiny;
+      } else {
+        pixels += tiny;
+      }
+      (_position as ScrollPosition).jumpTo(pixels);
+    }
   }
 
   /// Set mode.
@@ -729,19 +749,29 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       // Completion delay
       if (processedDuration == Duration.zero) {
         _ambiguate(WidgetsBinding.instance)!.addPostFrameCallback((timeStamp) {
-          _mode = IndicatorMode.done;
-          // Trigger [Scrollable] rollback
-          if (oldMode == IndicatorMode.processing &&
-              !userOffsetNotifier.value) {
-            _resetBallistic();
+          if (this.mode == IndicatorMode.processed) {
+            _mode = IndicatorMode.done;
+            if (offset == 0) {
+              _mode = IndicatorMode.inactive;
+            }
+            // Trigger [Scrollable] rollback
+            if (oldMode == IndicatorMode.processing &&
+                !userOffsetNotifier.value) {
+              _resetBallistic();
+            }
           }
         });
       } else {
         Future.delayed(processedDuration, () {
-          _setMode(IndicatorMode.done);
-          // Trigger [Scrollable] rollback
-          if (!userOffsetNotifier.value) {
-            _resetBallistic();
+          if (this.mode == IndicatorMode.processed) {
+            _setMode(IndicatorMode.done);
+            if (offset == 0) {
+              _mode = IndicatorMode.inactive;
+            }
+            // Trigger [Scrollable] rollback
+            if (!userOffsetNotifier.value) {
+              _resetBallistic();
+            }
           }
         });
       }
@@ -831,7 +861,7 @@ class HeaderNotifier extends IndicatorNotifier {
   HeaderNotifier({
     required Header header,
     required ValueNotifier<bool> userOffsetNotifier,
-    required _EasyRefreshState vsync,
+    required TickerProviderStateMixin vsync,
     required CanProcessCallBack onCanRefresh,
     bool noMoreRefresh = false,
     FutureOr Function()? onRefresh,
@@ -942,6 +972,7 @@ class HeaderNotifier extends IndicatorNotifier {
         _updateBySimulation(_position, 0);
       } else {
         userOffsetNotifier.value = true;
+        _clampingAnimationController!.value = position.minScrollExtent;
         await _clampingAnimationController!
             .animateTo(scrollTo, duration: duration, curve: curve);
         userOffsetNotifier.value = false;
@@ -978,7 +1009,7 @@ class FooterNotifier extends IndicatorNotifier {
   FooterNotifier({
     required Footer footer,
     required ValueNotifier<bool> userOffsetNotifier,
-    required _EasyRefreshState vsync,
+    required TickerProviderStateMixin vsync,
     required CanProcessCallBack onCanLoad,
     bool noMoreLoad = false,
     FutureOr Function()? onLoad,
@@ -992,6 +1023,18 @@ class FooterNotifier extends IndicatorNotifier {
           task: onLoad,
           waitTaskResult: waitLoadResult,
         );
+
+  /// Keep the extent of the [Scrollable] out of bounds.
+  @override
+  double get overExtent {
+    /// When the content of the list is not full,
+    /// the infinite scroll does not cross the bounds.
+    if (infiniteOffset != null &&
+        position.maxScrollExtent <= position.minScrollExtent) {
+      return 0;
+    }
+    return super.overExtent;
+  }
 
   @override
   double _calculateOffset(ScrollMetrics position, double value) {
@@ -1089,6 +1132,7 @@ class FooterNotifier extends IndicatorNotifier {
         _updateBySimulation(_position, 0);
       } else {
         userOffsetNotifier.value = true;
+        _clampingAnimationController!.value = position.maxScrollExtent;
         await _clampingAnimationController!
             .animateTo(scrollTo, duration: duration, curve: curve);
         userOffsetNotifier.value = false;
