@@ -11,7 +11,7 @@ const kDefaultSecondaryCloseTriggerOffset = 70.0;
 /// [offset] Indicator offset.
 /// [actualTriggerOffset] Indicator actual trigger offset.
 /// [velocity] Indicator actual trigger offset.
-typedef SpringBuilder = SpringDescription Function({
+typedef SpringBuilder = physics.SpringDescription Function({
   required IndicatorMode mode,
   required double offset,
   required double actualTriggerOffset,
@@ -270,10 +270,10 @@ abstract class Indicator {
   final Duration processedDuration;
 
   /// Spring effect when scrollable goes back.
-  final SpringDescription? spring;
+  final physics.SpringDescription? spring;
 
   /// Horizontal spring effect when scrollable goes back.
-  final SpringDescription? horizontalSpring;
+  final physics.SpringDescription? horizontalSpring;
 
   /// Spring effect when the mode is [IndicatorMode.ready].
   final SpringBuilder? readySpringBuilder;
@@ -342,6 +342,19 @@ abstract class Indicator {
   /// Trigger immediately when reaching the [triggerOffset].
   final bool triggerWhenReach;
 
+  /// Over [triggerOffset], the release triggers immediately.
+  final bool triggerWhenRelease;
+
+  /// Over [triggerOffset], the release triggers immediately.
+  /// No need to wait for task execution to complete,
+  /// generally used for non-asynchronous events
+  /// or external custom indicators.
+  final bool triggerWhenReleaseNoWait;
+
+  /// Maximum overscroll offset, will no longer scroll.
+  /// When [double.infinity], no limit.
+  final double maxOverOffset;
+
   const Indicator({
     required this.triggerOffset,
     required this.clamping,
@@ -366,6 +379,9 @@ abstract class Indicator {
     this.notifyWhenInvisible = false,
     this.listenable,
     this.triggerWhenReach = false,
+    this.triggerWhenRelease = false,
+    this.triggerWhenReleaseNoWait = false,
+    this.maxOverOffset = double.infinity,
   })  : hitOver = hitOver ?? infiniteOffset != null,
         infiniteHitOver = infiniteHitOver ?? infiniteOffset == null,
         assert(infiniteOffset == null || infiniteOffset >= 0,
@@ -383,7 +399,9 @@ abstract class Indicator {
         assert(
             secondaryDimension == null ||
                 secondaryDimension > (secondaryTriggerOffset ?? 0),
-            'The secondaryDimension cannot be less than secondaryTriggerOffset.');
+            'The secondaryDimension cannot be less than secondaryTriggerOffset.'),
+        assert(maxOverOffset == double.infinity || maxOverOffset >= 0,
+            'The maxOverOffset cannot be less than 0.');
 
   /// Build indicator widget.
   Widget build(BuildContext context, IndicatorState state);

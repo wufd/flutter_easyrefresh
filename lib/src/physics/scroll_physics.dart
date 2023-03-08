@@ -13,7 +13,7 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
     required this.userOffsetNotifier,
     required this.headerNotifier,
     required this.footerNotifier,
-    SpringDescription? spring,
+    physics.SpringDescription? spring,
     FrictionFactor? frictionFactor,
   })  : _spring = spring,
         _frictionFactor = frictionFactor,
@@ -51,7 +51,7 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
   final FooterNotifier footerNotifier;
 
   /// The spring to use for ballistic simulations.
-  final SpringDescription? _spring;
+  final physics.SpringDescription? _spring;
 
   /// The state of the indicator when the BallisticSimulation is created.
   late final ValueNotifier<_BallisticSimulationCreationState>
@@ -61,7 +61,7 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
 
   /// Get the current [SpringDescription] to be used.
   @override
-  SpringDescription get spring {
+  physics.SpringDescription get spring {
     if (headerNotifier.outOfRange) {
       if (headerNotifier._mode == IndicatorMode.ready &&
           headerNotifier.readySpringBuilder != null) {
@@ -227,8 +227,17 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
         // Header does not disappear,
         // and the list does not shift.
         bounds = value - position.pixels;
+        // Maximum overscroll offset
       }
     } else {
+      // Maximum overscroll offset
+      if (headerNotifier.actualMaxOverOffset != double.infinity &&
+          value < -headerNotifier.actualMaxOverOffset) {
+        _updateIndicatorOffset(
+            position, -headerNotifier.actualMaxOverOffset, value);
+        return (value + headerNotifier.actualMaxOverOffset) -
+            position.minScrollExtent;
+      }
       // hit top over
       if (!(headerNotifier.hitOver || headerNotifier.modeLocked) &&
           headerNotifier.mode != IndicatorMode.ready &&
@@ -318,6 +327,17 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
         bounds = value - position.pixels;
       }
     } else {
+      // Maximum overscroll offset
+      if (footerNotifier.actualMaxOverOffset != double.infinity &&
+          position.maxScrollExtent <
+              value - footerNotifier.actualMaxOverOffset) {
+        _updateIndicatorOffset(
+            position,
+            position.maxScrollExtent + footerNotifier.actualMaxOverOffset,
+            value);
+        return (value - footerNotifier.actualMaxOverOffset) -
+            position.maxScrollExtent;
+      }
       // hit bottom over
       if (!(footerNotifier.hitOver || footerNotifier.modeLocked) &&
           footerNotifier.mode != IndicatorMode.ready &&
@@ -419,6 +439,8 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
     // User stopped scrolling.
     final oldUserOffset = userOffsetNotifier.value;
     userOffsetNotifier.value = false;
+    final oldMaxScrollExtent =
+        headerNotifier._lastMaxScrollExtent ?? position.maxScrollExtent;
     // Simulation update.
     headerNotifier._updateBySimulation(position, velocity);
     footerNotifier._updateBySimulation(position, velocity);
@@ -442,11 +464,24 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
             footerNotifier._mode == IndicatorMode.secondaryOpen);
     bool secondary = hSecondary || fSecondary;
     if (velocity.abs() >= tolerance.velocity ||
+        (oldMaxScrollExtent != position.maxScrollExtent &&
+            position.maxScrollExtent != 0) ||
         (position.outOfRange || (secondary && oldUserOffset)) &&
             (oldUserOffset ||
                 _headerSimulationCreationState.value.needCreation(hState) ||
                 _footerSimulationCreationState.value.needCreation(fState))) {
       double mVelocity = velocity;
+      if (mVelocity < 0 &&
+          headerNotifier.actualMaxOverOffset != double.infinity &&
+          headerNotifier._offset != 0 &&
+          headerNotifier._offset >= headerNotifier.actualMaxOverOffset) {
+        mVelocity = 0;
+      } else if (mVelocity > 0 &&
+          footerNotifier.actualMaxOverOffset != double.infinity &&
+          footerNotifier._offset != 0 &&
+          footerNotifier._offset >= footerNotifier.actualMaxOverOffset) {
+        mVelocity = 0;
+      }
       // Open secondary speed.
       if (secondary) {
         if (hSecondary) {

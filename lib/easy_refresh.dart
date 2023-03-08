@@ -7,8 +7,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
+import 'package:flutter/physics.dart' as physics;
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_refresh/src/painter/paths_painter.dart';
 
@@ -45,6 +46,7 @@ part 'src/styles/delivery/delivery_indicator.dart';
 part 'src/styles/delivery/header/delivery_header.dart';
 part 'src/styles/delivery/footer/delivery_footer.dart';
 part 'src/styles/cupertino/cupertino_indicator.dart';
+part 'src/styles/cupertino/cupertino_activity_indicator.dart';
 part 'src/styles/cupertino/header/cupertino_header.dart';
 part 'src/styles/cupertino/footer/cupertino_footer.dart';
 

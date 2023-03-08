@@ -8,7 +8,7 @@ class TestPage extends StatefulWidget {
   const TestPage({Key? key}) : super(key: key);
 
   @override
-  _TestPageState createState() => _TestPageState();
+  State<TestPage> createState() => _TestPageState();
 }
 
 class _TestPageState extends State<TestPage> {
@@ -61,11 +61,14 @@ class _TestPageState extends State<TestPage> {
         ),
         header: const ClassicHeader(
           clamping: true,
-          position: IndicatorPosition.locator,
+          // position: IndicatorPosition.locator,
           mainAxisAlignment: MainAxisAlignment.end,
+          maxOverOffset: 100,
         ),
         footer: const ClassicFooter(
           position: IndicatorPosition.locator,
+          infiniteOffset: null,
+          maxOverOffset: 100,
         ),
         onRefresh: () async {
           print('Refreshing');
@@ -90,7 +93,7 @@ class _TestPageState extends State<TestPage> {
             _count += 0;
           });
           print('Loaded');
-          return IndicatorResult.noMore;
+          // return IndicatorResult.noMore;
         },
         // child: ListView.builder(
         //   padding: EdgeInsets.zero,
@@ -120,7 +123,7 @@ class _TestPageState extends State<TestPage> {
           scrollDirection: _scrollDirection,
           reverse: false,
           slivers: [
-            const HeaderLocator.sliver(),
+            // const HeaderLocator.sliver(),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
@@ -172,8 +175,7 @@ class _TestPageState extends State<TestPage> {
       ),
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.play_arrow),
-        onPressed: () =>
-            _controller.callRefresh(scrollController: _scrollController),
+        onPressed: () => _controller.callRefresh(),
       ),
     );
   }

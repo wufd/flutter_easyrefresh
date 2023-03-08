@@ -76,6 +76,11 @@ class EasyRefresh extends StatefulWidget {
   /// When null, disable refresh.
   /// The Header current state is [IndicatorMode.processing].
   /// More see [IndicatorNotifier._onTask].
+  /// The return value can be [IndicatorResult],
+  /// the default processing result is [IndicatorResult.success],
+  /// and [IndicatorResult.fail] when an exception occurs.
+  /// When [EasyRefreshController.controlFinishRefresh] is true,
+  /// the return value is invalid.
   final FutureOr Function()? onRefresh;
 
   /// Load callback.
@@ -83,11 +88,16 @@ class EasyRefresh extends StatefulWidget {
   /// When null, disable load.
   /// The Footer current state is [IndicatorMode.processing].
   /// More see [IndicatorNotifier._onTask].
+  /// The return value can be [IndicatorResult],
+  /// the default processing result is [IndicatorResult.success],
+  /// and [IndicatorResult.fail] when an exception occurs.
+  /// When [EasyRefreshController.controlFinishLoad] is true,
+  /// the return value is invalid.
   final FutureOr Function()? onLoad;
 
   /// Structure that describes a spring's constants.
   /// When spring is not set in [Header] and [Footer].
-  final SpringDescription? spring;
+  final physics.SpringDescription? spring;
 
   /// Friction factor when list is out of bounds.
   final FrictionFactor? frictionFactor;
@@ -98,7 +108,7 @@ class EasyRefresh extends StatefulWidget {
   /// Is it possible to refresh after there is no more.
   final bool noMoreRefresh;
 
-  /// Is it loadable after no more.
+  /// Is it possible to load after there is no more.
   final bool noMoreLoad;
 
   /// Reset after refresh when no more deactivation is loaded.
@@ -140,19 +150,18 @@ class EasyRefresh extends StatefulWidget {
 
   /// When the position cannot be determined, such as [NestedScrollView].
   /// Mainly used to trigger events.
+  /// NOTE: You also need to bind this to your [Scrollable.controller].
   final ScrollController? scrollController;
 
   /// Default header indicator.
-  static Header get _defaultHeader => defaultHeaderBuilder.call();
   static Header Function() defaultHeaderBuilder = _defaultHeaderBuilder;
-
   static Header _defaultHeaderBuilder() => const ClassicHeader();
+  static Header get _defaultHeader => defaultHeaderBuilder.call();
 
   /// Default footer indicator.
-  static Footer get _defaultFooter => defaultFooterBuilder.call();
   static Footer Function() defaultFooterBuilder = _defaultFooterBuilder;
-
   static Footer _defaultFooterBuilder() => const ClassicFooter();
+  static Footer get _defaultFooter => defaultFooterBuilder.call();
 
   /// Default ScrollBehavior builder.
   static ScrollBehavior Function(ScrollPhysics? physics)
@@ -277,6 +286,8 @@ class _EasyRefreshState extends State<EasyRefresh>
           position: h.position,
           spring: h.spring,
           frictionFactor: h.frictionFactor,
+          hitOver: h.hitOver,
+          maxOverOffset: h.maxOverOffset,
         );
       }
     } else {
@@ -301,6 +312,8 @@ class _EasyRefreshState extends State<EasyRefresh>
           position: f.position,
           spring: f.spring,
           frictionFactor: f.frictionFactor,
+          hitOver: f.hitOver,
+          maxOverOffset: f.maxOverOffset,
         );
       }
     } else {
@@ -473,7 +486,7 @@ class _EasyRefreshState extends State<EasyRefresh>
     bool force = false,
   }) {
     return _footerNotifier.callTask(
-      overOffset: overOffset ?? widget.callRefreshOverOffset,
+      overOffset: overOffset ?? widget.callLoadOverOffset,
       duration: duration,
       curve: curve,
       scrollController: scrollController ?? widget.scrollController,

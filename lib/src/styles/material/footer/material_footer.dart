@@ -43,7 +43,7 @@ class MaterialFooter extends Footer {
     bool clamping = true,
     IndicatorPosition position = IndicatorPosition.above,
     Duration processedDuration = const Duration(milliseconds: 200),
-    SpringDescription? spring,
+    physics.SpringDescription? spring,
     SpringBuilder? readySpringBuilder,
     bool springRebound = false,
     FrictionFactor? frictionFactor,
@@ -52,6 +52,8 @@ class MaterialFooter extends Footer {
     bool? hitOver,
     bool? infiniteHitOver,
     bool hapticFeedback = false,
+    bool triggerWhenRelease = false,
+    double maxOverOffset = double.infinity,
     this.backgroundColor,
     this.color,
     this.valueColor,
@@ -86,6 +88,8 @@ class MaterialFooter extends Footer {
           infiniteHitOver: infiniteHitOver,
           position: position,
           hapticFeedback: hapticFeedback,
+          triggerWhenRelease: triggerWhenRelease,
+          maxOverOffset: maxOverOffset,
         );
 
   @override

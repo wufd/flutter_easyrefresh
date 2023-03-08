@@ -5,20 +5,20 @@ const double _kCircularProgressIndicatorSize = 48;
 
 /// Friction factor used by material.
 double kMaterialFrictionFactor(double overscrollFraction) =>
-    0.435 * math.pow(1 - overscrollFraction, 2);
+    0.875 * math.pow(1 - overscrollFraction, 2);
 
 /// Friction factor used by material horizontal.
 double kMaterialHorizontalFrictionFactor(double overscrollFraction) =>
     1.0 * math.pow(1 - overscrollFraction, 2);
 
 /// Spring description used by material.
-SpringDescription kMaterialSpringBuilder({
+physics.SpringDescription kMaterialSpringBuilder({
   required IndicatorMode mode,
   required double offset,
   required double actualTriggerOffset,
   required double velocity,
 }) =>
-    SpringDescription.withDampingRatio(
+    physics.SpringDescription.withDampingRatio(
       mass: 1,
       stiffness: 500,
       ratio: 1.1,
@@ -149,6 +149,11 @@ class _MaterialIndicatorState extends State<_MaterialIndicator> {
         alignment: Alignment.center,
         children: [
           AnimatedScale(
+            duration: widget.disappearDuration,
+            scale:
+                _mode == IndicatorMode.processed || _mode == IndicatorMode.done
+                    ? 0
+                    : 1,
             child: RefreshProgressIndicator(
               value: _value,
               backgroundColor: widget.backgroundColor,
@@ -157,11 +162,6 @@ class _MaterialIndicatorState extends State<_MaterialIndicator> {
               semanticsLabel: widget.semanticsLabel,
               semanticsValue: widget.semanticsValue,
             ),
-            duration: widget.disappearDuration,
-            scale:
-                _mode == IndicatorMode.processed || _mode == IndicatorMode.done
-                    ? 0
-                    : 1,
           ),
           if (_mode == IndicatorMode.inactive &&
               _result == IndicatorResult.noMore)

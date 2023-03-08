@@ -96,7 +96,7 @@ class ClassicFooter extends Footer {
     bool clamping = false,
     IndicatorPosition position = IndicatorPosition.above,
     Duration processedDuration = Duration.zero,
-    SpringDescription? spring,
+    physics.SpringDescription? spring,
     SpringBuilder? readySpringBuilder,
     bool springRebound = true,
     FrictionFactor? frictionFactor,
@@ -106,6 +106,8 @@ class ClassicFooter extends Footer {
     bool? infiniteHitOver,
     bool hapticFeedback = false,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    double maxOverOffset = double.infinity,
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.backgroundColor,
     this.dragText,
@@ -148,6 +150,8 @@ class ClassicFooter extends Footer {
           position: position,
           hapticFeedback: hapticFeedback,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          maxOverOffset: maxOverOffset,
         );
 
   @override

@@ -24,7 +24,7 @@ class CupertinoHeader extends Header {
     bool clamping = false,
     IndicatorPosition position = IndicatorPosition.behind,
     Duration processedDuration = Duration.zero,
-    SpringDescription? spring,
+    physics.SpringDescription? spring,
     SpringBuilder? readySpringBuilder,
     bool springRebound = false,
     FrictionFactor? frictionFactor,
@@ -33,6 +33,8 @@ class CupertinoHeader extends Header {
     bool? hitOver,
     bool? infiniteHitOver,
     bool hapticFeedback = false,
+    bool triggerWhenRelease = false,
+    double maxOverOffset = double.infinity,
     this.foregroundColor,
     this.userWaterDrop = true,
     this.backgroundColor,
@@ -55,6 +57,8 @@ class CupertinoHeader extends Header {
           infiniteHitOver: infiniteHitOver,
           position: position,
           hapticFeedback: hapticFeedback,
+          triggerWhenRelease: triggerWhenRelease,
+          maxOverOffset: maxOverOffset,
         );
 
   @override

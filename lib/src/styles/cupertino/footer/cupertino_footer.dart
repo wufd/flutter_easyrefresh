@@ -24,7 +24,7 @@ class CupertinoFooter extends Footer {
     bool clamping = false,
     IndicatorPosition position = IndicatorPosition.behind,
     Duration processedDuration = Duration.zero,
-    SpringDescription? spring,
+    physics.SpringDescription? spring,
     SpringBuilder? readySpringBuilder,
     bool springRebound = true,
     FrictionFactor? frictionFactor,
@@ -33,6 +33,8 @@ class CupertinoFooter extends Footer {
     bool? hitOver,
     bool? infiniteHitOver,
     bool hapticFeedback = false,
+    bool triggerWhenRelease = false,
+    double maxOverOffset = double.infinity,
     this.foregroundColor,
     this.userWaterDrop = false,
     this.backgroundColor,
@@ -55,6 +57,8 @@ class CupertinoFooter extends Footer {
           infiniteHitOver: infiniteHitOver,
           position: position,
           hapticFeedback: hapticFeedback,
+          triggerWhenRelease: triggerWhenRelease,
+          maxOverOffset: maxOverOffset,
         );
 
   @override

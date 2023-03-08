@@ -6,8 +6,8 @@ abstract class Footer extends Indicator {
     required double triggerOffset,
     required bool clamping,
     Duration processedDuration = const Duration(seconds: 1),
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool springRebound = true,
@@ -26,6 +26,9 @@ abstract class Footer extends Indicator {
     bool notifyWhenInvisible = false,
     IndicatorStateListenable? listenable,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    bool triggerWhenReleaseNoWait = false,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: triggerOffset,
           clamping: clamping,
@@ -50,6 +53,9 @@ abstract class Footer extends Indicator {
           notifyWhenInvisible: notifyWhenInvisible,
           listenable: listenable,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          triggerWhenReleaseNoWait: triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset,
         );
 }
 
@@ -63,8 +69,8 @@ class BuilderFooter extends Footer {
     required double triggerOffset,
     required bool clamping,
     Duration processedDuration = const Duration(seconds: 1),
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool springRebound = true,
@@ -83,6 +89,9 @@ class BuilderFooter extends Footer {
     bool notifyWhenInvisible = false,
     IndicatorStateListenable? listenable,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    bool triggerWhenReleaseNoWait = false,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: triggerOffset,
           clamping: clamping,
@@ -107,6 +116,9 @@ class BuilderFooter extends Footer {
           notifyWhenInvisible: notifyWhenInvisible,
           listenable: listenable,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          triggerWhenReleaseNoWait: triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset,
         );
 
   @override
@@ -123,8 +135,8 @@ class ListenerFooter extends Footer {
     required double triggerOffset,
     bool clamping = true,
     Duration processedDuration = const Duration(seconds: 1),
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool springRebound = true,
@@ -141,6 +153,9 @@ class ListenerFooter extends Footer {
     double secondaryCloseTriggerOffset = kDefaultSecondaryCloseTriggerOffset,
     bool notifyWhenInvisible = false,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    bool triggerWhenReleaseNoWait = false,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: triggerOffset,
           clamping: clamping,
@@ -165,6 +180,9 @@ class ListenerFooter extends Footer {
           notifyWhenInvisible: notifyWhenInvisible,
           listenable: listenable,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          triggerWhenReleaseNoWait: triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset,
         );
 
   @override
@@ -210,6 +228,9 @@ abstract class SecondaryFooter extends Footer {
           notifyWhenInvisible: footer.notifyWhenInvisible,
           listenable: listenable ?? footer.listenable,
           triggerWhenReach: footer.triggerWhenReach,
+          triggerWhenRelease: footer.triggerWhenRelease,
+          triggerWhenReleaseNoWait: footer.triggerWhenReleaseNoWait,
+          maxOverOffset: footer.maxOverOffset,
         );
 
   @override
@@ -256,19 +277,24 @@ class NotLoadFooter extends Footer {
   const NotLoadFooter({
     bool clamping = false,
     IndicatorPosition position = IndicatorPosition.custom,
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     FrictionFactor? frictionFactor,
     FrictionFactor? horizontalFrictionFactor,
+    bool? hitOver,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: 0,
           clamping: clamping,
+          infiniteOffset: null,
           position: position,
           spring: spring,
           horizontalSpring: horizontalSpring,
           frictionFactor: frictionFactor,
           horizontalFrictionFactor: horizontalFrictionFactor,
           processedDuration: const Duration(seconds: 0),
+          hitOver: hitOver,
+          maxOverOffset: maxOverOffset,
         );
 
   @override
@@ -290,8 +316,8 @@ class OverrideFooter extends Footer {
     bool? clamping,
     IndicatorPosition? position,
     Duration? processedDuration,
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool? springRebound,
@@ -308,7 +334,10 @@ class OverrideFooter extends Footer {
     double? secondaryCloseTriggerOffset,
     bool? notifyWhenInvisible,
     IndicatorStateListenable? listenable,
-    bool triggerWhenReach = false,
+    bool? triggerWhenReach,
+    bool? triggerWhenRelease,
+    bool? triggerWhenReleaseNoWait,
+    double? maxOverOffset,
   }) : super(
           triggerOffset: triggerOffset ?? footer.triggerOffset,
           clamping: clamping ?? footer.clamping,
@@ -337,7 +366,11 @@ class OverrideFooter extends Footer {
           notifyWhenInvisible:
               notifyWhenInvisible ?? footer.notifyWhenInvisible,
           listenable: listenable ?? footer.listenable,
-          triggerWhenReach: triggerWhenReach,
+          triggerWhenReach: triggerWhenReach ?? footer.triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease ?? footer.triggerWhenRelease,
+          triggerWhenReleaseNoWait:
+              triggerWhenReleaseNoWait ?? footer.triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset ?? footer.maxOverOffset,
         );
 
   @override

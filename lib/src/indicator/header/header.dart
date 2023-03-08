@@ -6,8 +6,8 @@ abstract class Header extends Indicator {
     required double triggerOffset,
     required bool clamping,
     Duration processedDuration = const Duration(seconds: 1),
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool springRebound = true,
@@ -26,6 +26,9 @@ abstract class Header extends Indicator {
     bool notifyWhenInvisible = false,
     IndicatorStateListenable? listenable,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    bool triggerWhenReleaseNoWait = false,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: triggerOffset,
           clamping: clamping,
@@ -50,6 +53,9 @@ abstract class Header extends Indicator {
           notifyWhenInvisible: notifyWhenInvisible,
           listenable: listenable,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          triggerWhenReleaseNoWait: triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset,
         );
 }
 
@@ -64,8 +70,8 @@ class BuilderHeader extends Header {
     required bool clamping,
     required IndicatorPosition position,
     Duration processedDuration = const Duration(seconds: 1),
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool springRebound = true,
@@ -83,6 +89,9 @@ class BuilderHeader extends Header {
     bool notifyWhenInvisible = false,
     IndicatorStateListenable? listenable,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    bool triggerWhenReleaseNoWait = false,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: triggerOffset,
           clamping: clamping,
@@ -107,6 +116,9 @@ class BuilderHeader extends Header {
           notifyWhenInvisible: notifyWhenInvisible,
           listenable: listenable,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          triggerWhenReleaseNoWait: triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset,
         );
 
   @override
@@ -123,8 +135,8 @@ class ListenerHeader extends Header {
     required double triggerOffset,
     bool clamping = true,
     Duration processedDuration = const Duration(seconds: 1),
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool springRebound = true,
@@ -141,6 +153,9 @@ class ListenerHeader extends Header {
     double secondaryCloseTriggerOffset = kDefaultSecondaryCloseTriggerOffset,
     bool notifyWhenInvisible = false,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    bool triggerWhenReleaseNoWait = false,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: triggerOffset,
           clamping: clamping,
@@ -165,6 +180,9 @@ class ListenerHeader extends Header {
           notifyWhenInvisible: notifyWhenInvisible,
           listenable: listenable,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          triggerWhenReleaseNoWait: triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset,
         );
 
   @override
@@ -210,6 +228,9 @@ abstract class SecondaryHeader extends Header {
           notifyWhenInvisible: header.notifyWhenInvisible,
           listenable: listenable ?? header.listenable,
           triggerWhenReach: header.triggerWhenReach,
+          triggerWhenRelease: header.triggerWhenRelease,
+          triggerWhenReleaseNoWait: header.triggerWhenReleaseNoWait,
+          maxOverOffset: header.maxOverOffset,
         );
 
   @override
@@ -256,19 +277,24 @@ class NotRefreshHeader extends Header {
   const NotRefreshHeader({
     bool clamping = false,
     IndicatorPosition position = IndicatorPosition.custom,
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     FrictionFactor? frictionFactor,
     FrictionFactor? horizontalFrictionFactor,
+    bool? hitOver,
+    double maxOverOffset = double.infinity,
   }) : super(
           triggerOffset: 0,
           clamping: clamping,
+          infiniteOffset: null,
           position: position,
           spring: spring,
           horizontalSpring: horizontalSpring,
           frictionFactor: frictionFactor,
           horizontalFrictionFactor: horizontalFrictionFactor,
           processedDuration: const Duration(seconds: 0),
+          hitOver: hitOver,
+          maxOverOffset: maxOverOffset,
         );
 
   @override
@@ -290,8 +316,8 @@ class OverrideHeader extends Header {
     bool? clamping,
     IndicatorPosition? position,
     Duration? processedDuration,
-    SpringDescription? spring,
-    SpringDescription? horizontalSpring,
+    physics.SpringDescription? spring,
+    physics.SpringDescription? horizontalSpring,
     SpringBuilder? readySpringBuilder,
     SpringBuilder? horizontalReadySpringBuilder,
     bool? springRebound,
@@ -308,7 +334,10 @@ class OverrideHeader extends Header {
     double? secondaryCloseTriggerOffset,
     bool? notifyWhenInvisible,
     IndicatorStateListenable? listenable,
-    bool triggerWhenReach = false,
+    bool? triggerWhenReach,
+    bool? triggerWhenRelease,
+    bool? triggerWhenReleaseNoWait,
+    double? maxOverOffset,
   }) : super(
           triggerOffset: triggerOffset ?? header.triggerOffset,
           clamping: clamping ?? header.clamping,
@@ -337,7 +366,11 @@ class OverrideHeader extends Header {
           notifyWhenInvisible:
               notifyWhenInvisible ?? header.notifyWhenInvisible,
           listenable: listenable ?? header.listenable,
-          triggerWhenReach: triggerWhenReach,
+          triggerWhenReach: triggerWhenReach ?? header.triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease ?? header.triggerWhenRelease,
+          triggerWhenReleaseNoWait:
+              triggerWhenReleaseNoWait ?? header.triggerWhenReleaseNoWait,
+          maxOverOffset: maxOverOffset ?? header.maxOverOffset,
         );
 
   @override

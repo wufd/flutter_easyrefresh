@@ -70,8 +70,14 @@ abstract class IndicatorNotifier extends ChangeNotifier {
 
   double get secondaryVelocity => _indicator.secondaryVelocity;
 
+  double get maxOverOffset => _indicator.maxOverOffset;
+
+  double get actualMaxOverOffset => maxOverOffset == double.infinity
+      ? maxOverOffset
+      : (maxOverOffset + safeOffset);
+
   /// Spring description.
-  SpringDescription? get _spring {
+  physics.SpringDescription? get _spring {
     if (_axis == Axis.horizontal) {
       return _indicator.horizontalSpring ?? _indicator.spring;
     } else {
@@ -79,7 +85,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     }
   }
 
-  SpringDescription get spring => _physics.spring;
+  physics.SpringDescription get spring => _physics.spring;
 
   SpringBuilder? get readySpringBuilder {
     if (_axis == Axis.horizontal) {
@@ -133,22 +139,30 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   double get offset => _offset;
 
   /// The current scroll position.
-  ScrollMetrics get position => _position;
+  ScrollMetrics get position => _position!;
 
   set position(ScrollMetrics value) {
     if (value.isNestedOuter) {
       _viewportDimension = value.viewportDimension;
     } else if (value.isNestedInner) {
-      _viewportDimension = value.axis == Axis.vertical
-          ? vsync.context.size?.height
-          : vsync.context.size?.width;
+      if (_ambiguate(WidgetsBinding.instance)!.schedulerPhase !=
+          SchedulerPhase.persistentCallbacks) {
+        _viewportDimension = value.axis == Axis.vertical
+            ? vsync.context.size?.height
+            : vsync.context.size?.width;
+      }
     } else {
       _viewportDimension = null;
     }
     _position = value;
+    _lastMaxScrollExtent = value.maxScrollExtent;
   }
 
-  late ScrollMetrics _position;
+  ScrollMetrics? _position;
+
+  /// Cache maxScrollExtent.
+  /// Used to compare the last value.
+  double? _lastMaxScrollExtent;
 
   /// The current scroll velocity.
   double _velocity = 0;
@@ -416,7 +430,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// Animation listener for [clamping].
   void _clampingTick() {
     final mOffset = calculateOffsetWithPixels(
-        _position, _clampingAnimationController!.value);
+        position, _clampingAnimationController!.value);
     if (hasSecondary &&
         !noMoreLocked &&
         mOffset > secondaryDimension &&
@@ -456,10 +470,14 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       });
     }
     this.position = position;
+    final oldMode = _mode;
     // Update offset on release
     _updateOffset(position, position.pixels, true);
     // If clamping is true and offset is greater than 0, start animation
-    if (clamping && _offset > 0 && !(modeLocked || secondaryLocked)) {
+    if (clamping &&
+        _offset > 0 &&
+        ((_indicator.triggerWhenRelease && oldMode == IndicatorMode.armed) ||
+            !(modeLocked || secondaryLocked))) {
       final simulation = createBallisticSimulation(position, velocity);
       if (simulation != null) {
         _startClampingAnimation(simulation);
@@ -499,7 +517,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       if (_mode == IndicatorMode.done ||
           // Handling infinite scroll
           (infiniteOffset != null &&
-              (!_position.isNestedOuter && edgeOffset < infiniteOffset!) &&
+              (!position.isNestedOuter && edgeOffset < infiniteOffset!) &&
               !bySimulation &&
               !_infiniteExclude(position, value))) {
         // Update mode
@@ -518,11 +536,17 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       return;
     }
     // Haptic feedback
-    if (hapticFeedback &&
-        _mode == IndicatorMode.armed &&
-        oldMode != IndicatorMode.armed &&
-        userOffsetNotifier.value) {
-      HapticFeedback.mediumImpact();
+    if (hapticFeedback && userOffsetNotifier.value) {
+      if (_indicator.triggerWhenReach) {
+        if (_mode == IndicatorMode.processing &&
+            oldMode == IndicatorMode.drag) {
+          HapticFeedback.mediumImpact();
+        }
+      } else {
+        if (_mode == IndicatorMode.armed && oldMode != IndicatorMode.armed) {
+          HapticFeedback.mediumImpact();
+        }
+      }
     }
     // Avoid setState() during drawing
     if (bySimulation) {
@@ -544,6 +568,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       if (_mode != IndicatorMode.inactive) {
         _mode = IndicatorMode.inactive;
       }
+      return;
     }
     // Not updated during task execution and task completion.
     if (!(modeLocked || noMoreLocked || secondaryLocked)) {
@@ -554,9 +579,9 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       }
       // Infinite scroll
       if (infiniteOffset != null &&
-          (!_position.isNestedOuter && edgeOffset < infiniteOffset!)) {
+          (!position.isNestedOuter && edgeOffset < infiniteOffset!)) {
         if (_mode == IndicatorMode.done &&
-            _position.maxScrollExtent != _position.minScrollExtent) {
+            position.maxScrollExtent != position.minScrollExtent) {
           // The state does not change until the end
           return;
         } else {
@@ -622,9 +647,24 @@ abstract class IndicatorNotifier extends ChangeNotifier {
                 ? IndicatorMode.processing
                 : IndicatorMode.armed;
           } else {
-            _mode = (_releaseOffset > actualTriggerOffset
-                ? IndicatorMode.ready
-                : IndicatorMode.armed);
+            if (_releaseOffset > actualTriggerOffset) {
+              if (_indicator.triggerWhenReleaseNoWait) {
+                // Immediately trigger the task.
+                // No need to wait for events to complete.
+                // Mode changes to IndicatorMode.done.
+                if (_task != null) {
+                  Future.sync(_task!);
+                }
+                _mode = IndicatorMode.done;
+              } else if (_indicator.triggerWhenRelease) {
+                // Immediately trigger the task.
+                _mode = IndicatorMode.processing;
+              } else {
+                _mode = IndicatorMode.ready;
+              }
+            } else {
+              _mode = IndicatorMode.armed;
+            }
           }
         }
       }
@@ -688,7 +728,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
 
   /// Start [clamping] animation
   void _startClampingAnimation(Simulation simulation) {
-    if (_offset <= 0) {
+    if (_offset <= 0 || _clampingAnimationController!.isAnimating) {
       return;
     }
     _clampingAnimationController!.animateWith(simulation);
@@ -716,18 +756,6 @@ abstract class IndicatorNotifier extends ChangeNotifier {
           _startClampingAnimation(simulation);
         }
       }
-    }
-    if (clamping && !userOffsetNotifier.value) {
-      // Sucks. When clamping, the position will not change after the task is completed.
-      // Temporary solution like this, there is a better way to replace.
-      double pixels = _position.pixels;
-      const tiny = 0.001;
-      if (pixels > tiny) {
-        pixels -= tiny;
-      } else {
-        pixels += tiny;
-      }
-      (_position as ScrollPosition).jumpTo(pixels);
     }
   }
 
@@ -778,7 +806,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       // Actively update the offset if the user does not release
       if (!clamping && userOffsetNotifier.value) {
         Future(() {
-          _updateOffset(_position, _position.pixels, false);
+          _updateOffset(position, position.pixels, false);
         });
       }
     }
@@ -896,6 +924,10 @@ class HeaderNotifier extends IndicatorNotifier {
           // Cannot exceed secondary offset.
           return secondaryDimension;
         }
+        // Maximum overscroll offset
+        if (actualMaxOverOffset != double.infinity) {
+          return math.min(mOffset, actualMaxOverOffset);
+        }
         return mOffset;
       }
     } else {
@@ -932,7 +964,7 @@ class HeaderNotifier extends IndicatorNotifier {
 
   /// See [IndicatorNotifier.edgeOffset].
   @override
-  double get edgeOffset => _position.pixels;
+  double get edgeOffset => position.pixels;
 
   @override
   bool _infiniteExclude(ScrollMetrics position, double value) {
@@ -962,21 +994,21 @@ class HeaderNotifier extends IndicatorNotifier {
         scrollController
             .jumpTo(scrollController.positions.first.minScrollExtent);
       } else {
-        (_position as ScrollPosition).jumpTo(_position.minScrollExtent);
+        (_position as ScrollPosition).jumpTo(position.minScrollExtent);
       }
     }
     if (clamping) {
       if (duration == null) {
         _offset = offset;
         _mode = mode;
-        _updateBySimulation(_position, 0);
+        _updateBySimulation(position, 0);
       } else {
         userOffsetNotifier.value = true;
         _clampingAnimationController!.value = position.minScrollExtent;
         await _clampingAnimationController!
             .animateTo(scrollTo, duration: duration, curve: curve);
         userOffsetNotifier.value = false;
-        _updateBySimulation(_position, 0);
+        _updateBySimulation(position, 0);
       }
     } else {
       if (_position is ScrollPosition) {
@@ -1056,6 +1088,10 @@ class FooterNotifier extends IndicatorNotifier {
           // Cannot exceed secondary offset.
           return secondaryDimension;
         }
+        // Maximum overscroll offset
+        if (actualMaxOverOffset != double.infinity) {
+          return math.min(mOffset, actualMaxOverOffset);
+        }
         return mOffset;
       }
     } else {
@@ -1092,7 +1128,7 @@ class FooterNotifier extends IndicatorNotifier {
 
   /// See [IndicatorNotifier.edgeOffset].
   @override
-  double get edgeOffset => _position.maxScrollExtent - _position.pixels;
+  double get edgeOffset => position.maxScrollExtent - position.pixels;
 
   @override
   bool _infiniteExclude(ScrollMetrics position, double value) {
@@ -1115,28 +1151,28 @@ class FooterNotifier extends IndicatorNotifier {
     } catch (_) {
       return;
     }
-    final scrollTo = _position.maxScrollExtent + offset;
+    final scrollTo = position.maxScrollExtent + offset;
     _releaseOffset = offset;
     if (jumpToEdge) {
       if (scrollController != null) {
         scrollController
             .jumpTo(scrollController.positions.first.maxScrollExtent);
       } else {
-        (_position as ScrollPosition).jumpTo(_position.maxScrollExtent);
+        (_position as ScrollPosition).jumpTo(position.maxScrollExtent);
       }
     }
     if (clamping) {
       if (duration == null) {
         _offset = offset;
         _mode = mode;
-        _updateBySimulation(_position, 0);
+        _updateBySimulation(position, 0);
       } else {
         userOffsetNotifier.value = true;
         _clampingAnimationController!.value = position.maxScrollExtent;
         await _clampingAnimationController!
             .animateTo(scrollTo, duration: duration, curve: curve);
         userOffsetNotifier.value = false;
-        _updateBySimulation(_position, 0);
+        _updateBySimulation(position, 0);
       }
     } else {
       if (_position is ScrollPosition) {

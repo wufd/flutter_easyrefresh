@@ -88,4 +88,12 @@ const en = {
   '%s copied!': '%s copied!',
   'Trigger immediately': 'Trigger immediately',
   'TabBarView example': 'NestedScrollView + TabBarView example',
+  'Paging': 'Paging',
+  'Paging example': 'Paging example',
+  'No Data': 'No Data',
+  'Theme switch': 'Theme switch',
+  'Theme switch example': 'Theme switch example',
+  'Theme switch describe':
+      'Pull down to display the switching panel, slide left and right to select the theme color, and release to switch.',
+  'Bubbles launch': 'Bubbles launch',
 };

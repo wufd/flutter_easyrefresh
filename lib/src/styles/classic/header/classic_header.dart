@@ -96,7 +96,7 @@ class ClassicHeader extends Header {
     bool clamping = false,
     IndicatorPosition position = IndicatorPosition.above,
     Duration processedDuration = const Duration(seconds: 1),
-    SpringDescription? spring,
+    physics.SpringDescription? spring,
     SpringBuilder? readySpringBuilder,
     bool springRebound = true,
     FrictionFactor? frictionFactor,
@@ -106,6 +106,8 @@ class ClassicHeader extends Header {
     bool? infiniteHitOver,
     bool hapticFeedback = false,
     bool triggerWhenReach = false,
+    bool triggerWhenRelease = false,
+    double maxOverOffset = double.infinity,
     this.mainAxisAlignment = MainAxisAlignment.center,
     this.backgroundColor,
     this.dragText,
@@ -148,6 +150,8 @@ class ClassicHeader extends Header {
           position: position,
           hapticFeedback: hapticFeedback,
           triggerWhenReach: triggerWhenReach,
+          triggerWhenRelease: triggerWhenRelease,
+          maxOverOffset: maxOverOffset,
         );
 
   @override
