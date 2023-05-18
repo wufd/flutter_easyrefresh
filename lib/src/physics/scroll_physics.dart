@@ -250,7 +250,8 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
         return value - position.minScrollExtent;
       }
       // infinite hit top over
-      if ((!headerNotifier.infiniteHitOver ||
+      if (headerNotifier._isSupportAxis &&
+          (!headerNotifier.infiniteHitOver ||
               (!headerNotifier.hitOver && headerNotifier.modeLocked)) &&
           (headerNotifier._canProcess || headerNotifier.noMoreLocked) &&
           (value + headerNotifier.actualTriggerOffset) <
@@ -278,13 +279,6 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
             value -
             position.minScrollExtent;
       }
-      // if (!userOffsetNotifier.value &&
-      //     (headerNotifier._mode == IndicatorMode.done ||
-      //         headerNotifier._mode == IndicatorMode.drag) &&
-      //     value > position.minScrollExtent) {
-      //   _updateIndicatorOffset(position, 0);
-      //   return value - position.minScrollExtent;
-      // }
       // Cannot over the secondary.
       if (headerNotifier.hasSecondary) {
         if (value < position.pixels &&
@@ -350,7 +344,8 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
         return value - position.maxScrollExtent;
       }
       // infinite hit bottom over
-      if (!(footerNotifier.infiniteOffset != null &&
+      if (footerNotifier._isSupportAxis &&
+          !(footerNotifier.infiniteOffset != null &&
               position.maxScrollExtent <= position.minScrollExtent) &&
           (!footerNotifier.infiniteHitOver ||
               !footerNotifier.hitOver && footerNotifier.modeLocked) &&
@@ -383,13 +378,6 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
         return (value - footerNotifier.actualTriggerOffset) -
             position.maxScrollExtent;
       }
-      // if (!userOffsetNotifier.value &&
-      //     (footerNotifier._mode == IndicatorMode.done ||
-      //         footerNotifier._mode == IndicatorMode.drag) &&
-      //     value < position.maxScrollExtent) {
-      //   _updateIndicatorOffset(position, position.maxScrollExtent);
-      //   return value - position.maxScrollExtent;
-      // }
       // Cannot over the secondary.
       if (footerNotifier.hasSecondary) {
         if (position.maxScrollExtent + footerNotifier.secondaryDimension <=
@@ -433,9 +421,20 @@ class _ERScrollPhysics extends BouncingScrollPhysics {
     footerNotifier._updateOffset(position, hClamping ? 0 : offset, false);
   }
 
+  /// The tolerance to use for ballistic simulations.
+  Tolerance getTolerance(ScrollMetrics metrics) {
+    try {
+      // This feature after v3.7.0-13.0.pre.
+      return (this as dynamic).toleranceFor(metrics);
+    } catch (_) {
+      return this.tolerance;
+    }
+  }
+
   @override
   Simulation? createBallisticSimulation(
       ScrollMetrics position, double velocity) {
+    Tolerance tolerance = getTolerance(position);
     // User stopped scrolling.
     final oldUserOffset = userOffsetNotifier.value;
     userOffsetNotifier.value = false;

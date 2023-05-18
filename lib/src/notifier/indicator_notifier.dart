@@ -31,17 +31,23 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// Mounted on EasyRefresh.
   bool _mounted = false;
 
+  /// Direction of execution.
+  /// Other scroll directions will not show indicators and perform task.
+  Axis? _triggerAxis;
+
   IndicatorNotifier({
     required Indicator indicator,
     required this.vsync,
     required this.userOffsetNotifier,
     required CanProcessCallBack onCanProcess,
-    required bool noMoreProcess,
+    required bool canProcessAfterNoMore,
+    Axis? triggerAxis,
     bool waitTaskResult = true,
     FutureOr Function()? task,
   })  : _indicator = indicator,
         _onCanProcess = onCanProcess,
-        _noMoreProcess = noMoreProcess,
+        _canProcessAfterNoMore = canProcessAfterNoMore,
+        _triggerAxis = triggerAxis,
         _waitTaskResult = waitTaskResult,
         _task = task {
     _initClampingAnimation();
@@ -209,8 +215,20 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   double get actualSecondaryTriggerOffset =>
       secondaryTriggerOffset! + safeOffset;
 
+  /// Whether to support the direction.
+  bool get _isSupportAxis {
+    if (_triggerAxis == null || _axis == null) {
+      return true;
+    }
+    return _axis == _triggerAxis;
+  }
+
   /// Keep the extent of the [Scrollable] out of bounds.
   double get overExtent {
+    // If the direction is different do not change.
+    if (!_isSupportAxis) {
+      return 0;
+    }
     // State that doesn't change.
     if (_task == null ||
         (!_canProcess && !noMoreLocked) ||
@@ -262,11 +280,11 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   IndicatorResult _result = IndicatorResult.none;
 
   /// Whether to execute the task after no more.
-  bool _noMoreProcess;
+  bool _canProcessAfterNoMore;
 
   /// State lock when no more.
   bool get noMoreLocked =>
-      !_noMoreProcess &&
+      !_canProcessAfterNoMore &&
       _result == IndicatorResult.noMore &&
       _mode == IndicatorMode.inactive;
 
@@ -367,7 +385,8 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   /// When the EasyRefresh parameters is updated.
   void _update({
     Indicator? indicator,
-    bool? noMoreProcess,
+    bool? canProcessAfterNoMore,
+    Axis? triggerAxis,
     FutureOr Function()? task,
     bool? waitTaskRefresh,
   }) {
@@ -376,7 +395,8 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       indicator.listenable?._bind(this);
       _indicator = indicator;
     }
-    _noMoreProcess = noMoreProcess ?? _noMoreProcess;
+    _canProcessAfterNoMore = canProcessAfterNoMore ?? _canProcessAfterNoMore;
+    _triggerAxis = triggerAxis;
     _task = task;
     _waitTaskResult = waitTaskRefresh ?? _waitTaskResult;
     if (_indicator.clamping && _clampingAnimationController == null) {
@@ -521,7 +541,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
               !bySimulation &&
               !_infiniteExclude(position, value))) {
         // Update mode
-        _updateMode();
+        _updateMode(oldOffset);
         notifyListeners();
       }
       if (_indicator.notifyWhenInvisible && !bySimulation) {
@@ -530,7 +550,7 @@ abstract class IndicatorNotifier extends ChangeNotifier {
       return;
     }
     // Update mode
-    _updateMode();
+    _updateMode(oldOffset);
     // Need notify
     if (oldOffset == _offset && oldMode == _mode) {
       return;
@@ -562,7 +582,11 @@ abstract class IndicatorNotifier extends ChangeNotifier {
   }
 
   /// Update indicator state.
-  void _updateMode() {
+  void _updateMode([double? oldOffset]) {
+    // When the orientation is different, no modification is made.
+    if (!_isSupportAxis) {
+      return;
+    }
     // No task, keep IndicatorMode.inactive state.
     if (_task == null) {
       if (_mode != IndicatorMode.inactive) {
@@ -582,14 +606,25 @@ abstract class IndicatorNotifier extends ChangeNotifier {
           (!position.isNestedOuter && edgeOffset < infiniteOffset!)) {
         if (_mode == IndicatorMode.done &&
             position.maxScrollExtent != position.minScrollExtent) {
-          // The state does not change until the end
-          return;
+          if ((_result == IndicatorResult.fail ||
+                  (_result == IndicatorResult.noMore &&
+                      _canProcessAfterNoMore)) &&
+              oldOffset != null &&
+              oldOffset < _offset) {
+            // Trigger task if in failed state.
+            _result = IndicatorResult.none;
+            _mode = IndicatorMode.processing;
+          } else {
+            // The state does not change until the end
+            return;
+          }
         } else {
           if (_mode == IndicatorMode.done) {
             if (offset == 0) {
               _mode = IndicatorMode.inactive;
             }
           } else {
+            _result = IndicatorResult.none;
             _mode = IndicatorMode.processing;
           }
         }
@@ -600,12 +635,17 @@ abstract class IndicatorNotifier extends ChangeNotifier {
         if (!(_mode == IndicatorMode.ready && !userOffsetNotifier.value)) {
           // Prevent Spring from having repeated rebounds.
           _mode = IndicatorMode.inactive;
-          if (_result != IndicatorResult.noMore || _noMoreProcess) {
+          if (_result != IndicatorResult.noMore || _canProcessAfterNoMore) {
             _result = IndicatorResult.none;
           }
           _releaseOffset = 0;
         }
       } else if (_offset < actualTriggerOffset) {
+        if (_canProcessAfterNoMore &&
+            _result == IndicatorResult.noMore &&
+            userOffsetNotifier.value) {
+          _result = IndicatorResult.none;
+        }
         if (!(_mode == IndicatorMode.ready && !userOffsetNotifier.value)) {
           // Prevent Spring from having repeated rebounds.
           _mode = IndicatorMode.drag;
@@ -837,6 +877,9 @@ abstract class IndicatorNotifier extends ChangeNotifier {
     if (_axis == null || _axisDirection == null) {
       return const SizedBox();
     }
+    if (!_isSupportAxis) {
+      return const SizedBox();
+    }
     return _indicator.build(
       context,
       indicatorState!,
@@ -891,7 +934,9 @@ class HeaderNotifier extends IndicatorNotifier {
     required ValueNotifier<bool> userOffsetNotifier,
     required TickerProviderStateMixin vsync,
     required CanProcessCallBack onCanRefresh,
-    bool noMoreRefresh = false,
+    bool canProcessAfterNoMore = false,
+    bool canProcessAfterFail = true,
+    Axis? triggerAxis,
     FutureOr Function()? onRefresh,
     bool waitRefreshResult = true,
   }) : super(
@@ -899,7 +944,8 @@ class HeaderNotifier extends IndicatorNotifier {
           userOffsetNotifier: userOffsetNotifier,
           vsync: vsync,
           onCanProcess: onCanRefresh,
-          noMoreProcess: noMoreRefresh,
+          canProcessAfterNoMore: canProcessAfterNoMore,
+          triggerAxis: triggerAxis,
           task: onRefresh,
           waitTaskResult: waitRefreshResult,
         );
@@ -956,7 +1002,7 @@ class HeaderNotifier extends IndicatorNotifier {
         velocity: mVelocity,
         leadingExtent: position.minScrollExtent - overExtent,
         trailingExtent: 0,
-        tolerance: _physics.tolerance,
+        tolerance: _physics.getTolerance(position),
       );
     }
     return null;
@@ -1043,7 +1089,9 @@ class FooterNotifier extends IndicatorNotifier {
     required ValueNotifier<bool> userOffsetNotifier,
     required TickerProviderStateMixin vsync,
     required CanProcessCallBack onCanLoad,
-    bool noMoreLoad = false,
+    bool canProcessAfterNoMore = false,
+    bool canProcessAfterFail = true,
+    Axis? triggerAxis,
     FutureOr Function()? onLoad,
     bool waitLoadResult = true,
   }) : super(
@@ -1051,7 +1099,8 @@ class FooterNotifier extends IndicatorNotifier {
           userOffsetNotifier: userOffsetNotifier,
           vsync: vsync,
           onCanProcess: onCanLoad,
-          noMoreProcess: noMoreLoad,
+          canProcessAfterNoMore: canProcessAfterNoMore,
+          triggerAxis: triggerAxis,
           task: onLoad,
           waitTaskResult: waitLoadResult,
         );
@@ -1120,7 +1169,7 @@ class FooterNotifier extends IndicatorNotifier {
         velocity: mVelocity,
         leadingExtent: 0,
         trailingExtent: position.maxScrollExtent + overExtent,
-        tolerance: _physics.tolerance,
+        tolerance: _physics.getTolerance(position),
       );
     }
     return null;

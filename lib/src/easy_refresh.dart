@@ -106,10 +106,10 @@ class EasyRefresh extends StatefulWidget {
   final bool simultaneously;
 
   /// Is it possible to refresh after there is no more.
-  final bool noMoreRefresh;
+  final bool canRefreshAfterNoMore;
 
   /// Is it possible to load after there is no more.
-  final bool noMoreLoad;
+  final bool canLoadAfterNoMore;
 
   /// Reset after refresh when no more deactivation is loaded.
   final bool resetAfterRefresh;
@@ -153,6 +153,10 @@ class EasyRefresh extends StatefulWidget {
   /// NOTE: You also need to bind this to your [Scrollable.controller].
   final ScrollController? scrollController;
 
+  /// Direction of execution.
+  /// Other scroll directions will not show indicators and perform task.
+  final Axis? triggerAxis;
+
   /// Default header indicator.
   static Header Function() defaultHeaderBuilder = _defaultHeaderBuilder;
   static Header _defaultHeaderBuilder() => const ClassicHeader();
@@ -183,8 +187,8 @@ class EasyRefresh extends StatefulWidget {
     this.notRefreshHeader,
     this.notLoadFooter,
     this.simultaneously = false,
-    this.noMoreRefresh = false,
-    this.noMoreLoad = false,
+    this.canRefreshAfterNoMore = false,
+    this.canLoadAfterNoMore = false,
     this.resetAfterRefresh = true,
     this.refreshOnStart = false,
     this.refreshOnStartHeader,
@@ -194,6 +198,7 @@ class EasyRefresh extends StatefulWidget {
     this.clipBehavior = Clip.hardEdge,
     this.scrollBehaviorBuilder,
     this.scrollController,
+    this.triggerAxis,
   })  : childBuilder = null,
         assert(callRefreshOverOffset > 0,
             'callRefreshOverOffset must be greater than 0.'),
@@ -214,8 +219,8 @@ class EasyRefresh extends StatefulWidget {
     this.notRefreshHeader,
     this.notLoadFooter,
     this.simultaneously = false,
-    this.noMoreRefresh = false,
-    this.noMoreLoad = false,
+    this.canRefreshAfterNoMore = false,
+    this.canLoadAfterNoMore = false,
     this.resetAfterRefresh = true,
     this.refreshOnStart = false,
     this.refreshOnStartHeader,
@@ -225,6 +230,7 @@ class EasyRefresh extends StatefulWidget {
     this.clipBehavior = Clip.hardEdge,
     this.scrollBehaviorBuilder,
     this.scrollController,
+    this.triggerAxis,
   })  : child = null,
         assert(callRefreshOverOffset > 0,
             'callRefreshOverOffset must be greater than 0.'),
@@ -346,13 +352,15 @@ class _EasyRefreshState extends State<EasyRefresh>
     // Update header and footer.
     _headerNotifier._update(
       indicator: _header,
-      noMoreProcess: widget.noMoreRefresh,
+      canProcessAfterNoMore: widget.canRefreshAfterNoMore,
+      triggerAxis: widget.triggerAxis,
       task: _onRefresh,
       waitTaskRefresh: _waitRefreshResult,
     );
     _footerNotifier._update(
       indicator: _footer,
-      noMoreProcess: widget.noMoreLoad,
+      canProcessAfterNoMore: widget.canLoadAfterNoMore,
+      triggerAxis: widget.triggerAxis,
       task: widget.onLoad,
       waitTaskRefresh: _waitLoadResult,
     );
@@ -381,7 +389,8 @@ class _EasyRefreshState extends State<EasyRefresh>
         userOffsetNotifier: userOffsetNotifier,
         vsync: this,
         onRefresh: _onRefresh,
-        noMoreRefresh: widget.noMoreRefresh,
+        canProcessAfterNoMore: widget.canRefreshAfterNoMore,
+        triggerAxis: widget.triggerAxis,
         waitRefreshResult: _waitRefreshResult,
         onCanRefresh: () {
           if (widget.simultaneously) {
@@ -396,7 +405,8 @@ class _EasyRefreshState extends State<EasyRefresh>
         userOffsetNotifier: userOffsetNotifier,
         vsync: this,
         onLoad: widget.onLoad,
-        noMoreLoad: widget.noMoreLoad,
+        canProcessAfterNoMore: widget.canLoadAfterNoMore,
+        triggerAxis: widget.triggerAxis,
         waitLoadResult: _waitLoadResult,
         onCanLoad: () {
           if (widget.simultaneously) {

@@ -22,6 +22,13 @@ class BezierFooter extends Footer {
   /// Background color.
   final Color? backgroundColor;
 
+  /// Whether the spin widget is in the center.
+  final bool spinInCenter;
+
+  /// Only display the spin.
+  /// When true, the balls are no longer displayed.
+  final bool onlySpin;
+
   const BezierFooter({
     this.key,
     double triggerOffset = 100,
@@ -38,6 +45,8 @@ class BezierFooter extends Footer {
     bool? infiniteHitOver,
     bool hapticFeedback = false,
     this.showBalls = true,
+    this.spinInCenter = true,
+    this.onlySpin = false,
     this.spinWidget,
     this.noMoreWidget,
     this.spinBuilder,
@@ -67,6 +76,8 @@ class BezierFooter extends Footer {
       reverse: !state.reverse,
       processedDuration: processedDuration,
       showBalls: showBalls,
+      spinInCenter: spinInCenter,
+      onlySpin: onlySpin,
       spinWidget: spinWidget,
       noMoreWidget: noMoreWidget,
       spinBuilder: spinBuilder,
